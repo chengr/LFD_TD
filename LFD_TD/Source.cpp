@@ -3,6 +3,8 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <cv.h>
 #include <stdio.h>
+
+#include <fstream> 
 using namespace cv;
 using namespace std;
 double pi =3.141592653589793;
@@ -10,12 +12,19 @@ Mat find_circle_and_draw_rec(Mat src_img,int size);//輸入影像,輸出影像大小
 int main(int argc, char** argv)
 {
 	//
-	Mat src = imread("pic/DSC06707.jpg",1);
-	Mat result=find_circle_and_draw_rec(src,720);
+	Mat src;
+	Mat result;
+	int num=657;
+	for(int i=num;i<663;i++){
+		ifstream f1("pic/DSC06"+to_string(i)+".jpg");
+		if (f1) {
+			src = imread("pic/DSC06"+to_string(i)+".jpg",1);
+			result=find_circle_and_draw_rec(src,720);
+			imwrite("pic/out/SQR"+to_string(i)+".jpg", result);
+		}
+	}
 	namedWindow("Result", CV_WINDOW_AUTOSIZE );
 	imshow("Result",result);
-
-	imwrite("pic/SQR001.jpg", result);
 	waitKey(0);
 	return 0;
 }
@@ -65,17 +74,30 @@ Mat find_circle_and_draw_rec(Mat src_img,int size){
 	//////////////new a square///////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////
 	
-	Mat result(size,size , CV_8UC3, Scalar(0,0,0));
+	Mat result(size/2,size , CV_8UC3, Scalar(0,0,0));
 	double h=cvRound(circles[0][0]);//A(h,k)圓心
 	double k=cvRound(circles[0][1]);
 	double r=cvRound(circles[0][2]);//radius
-	double x=0,y=0;
+	double h2=0,k2=0;
 	//x=Xm+r*cos(theata) y=Ym+r*sin(theata) 
 	//(Xm,Ym)為圓心
 	//r為半徑
 
 
 	double dd=360/(double)size;
+	for(int i=0;i<size;i++){
+		double deg=(i*dd*pi)/180;
+		double radius=(2*r)/size;
+		for(int j=0;j<size/2;j++){
+			h2=h+j*radius*cos(deg);//h
+			k2=k+j*radius*sin(deg);//k
+			Vec3b color=src_img.at<Vec3b>(Point(h2,k2));
+			result.at<Vec3b>(Point(i,j)) = color;
+		}
+
+	}
+
+	/*
 	for(int i=0;i<size;i++){
 		double deg=(i*dd*pi)/180;
 		x=h+r*cos(deg);
@@ -103,9 +125,7 @@ Mat find_circle_and_draw_rec(Mat src_img,int size){
 				result.at<Vec3b>(Point(i,j)) = color;
 			}
 		}
-
-
-	}
+	}*/
 	//GaussianBlur( result,result, Size(9,9), 2, 2 );
 	return result;
 }
