@@ -1,6 +1,7 @@
 // lens_flaw_detection_project_training_data.cpp : 定義主控台應用程式的進入點。
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/gpu/gpu.hpp"
 #include <cv.h>
 #include <stdio.h>
 #include <fstream> 
@@ -8,21 +9,41 @@ using namespace cv;
 using namespace std;
 double pi =3.141592653589793;
 Mat find_circle_and_draw_rec(Mat src_img,int size);//輸入影像,輸出影像大小
+Mat diff(Mat i1);//二值化
 int main(int argc, char** argv)
 {
 	Mat src;
 	Mat result;
 	int num=657;
-	for(int i=num;i<663;i++){
+	//將圖片方型化
+	for(int i=num;i<=801;i++){
 		ifstream f1("pic/DSC06"+to_string(i)+".jpg");
 		if (f1) {
 			src = imread("pic/DSC06"+to_string(i)+".jpg",1);
-			result=find_circle_and_draw_rec(src,720);
+			result=find_circle_and_draw_rec(src,1440);
 			imwrite("pic/out/SQR"+to_string(i)+".jpg", result);
 		}
 	}
-	namedWindow("Result", CV_WINDOW_AUTOSIZE );
-	imshow("Result",result);
+	//namedWindow("Result", CV_WINDOW_AUTOSIZE );
+	//imshow("Result",result);
+	//處理方型化的圖
+	for(int i=num;i<=801;i++){
+		ifstream f1("pic/out/SQR"+to_string(i)+".jpg");
+		if (f1) {
+			src = imread("pic/out/SQR"+to_string(i)+".jpg",1);
+			src.convertTo(src, -1, 2.0, -100);// Enter the alpha value [1.0-3.0]: 2.2 Enter the beta value [0-100]: 50
+			Mat element(3,3,CV_8U,Scalar(1));  
+			erode(src,src,element); 
+			Mat element2(3,3,CV_8U,Scalar(1));  
+			dilate(src,src,element2); 
+			//
+			pyrMeanShiftFiltering(src, src, 5, 40, 4);  //dst,color,level
+			imwrite("pic/out2/FC"+to_string(i)+"_1.jpg", src);
+			src=diff(src);
+			//
+			imwrite("pic/out2/FC"+to_string(i)+"_2.jpg", src);
+		}
+	}
 	waitKey(0);
 	return 0;
 }
@@ -66,7 +87,7 @@ Mat find_circle_and_draw_rec(Mat src_img,int size){
 	//////////////new a square///////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////////////////
 	
-	Mat result(size/2,size , CV_8UC3, Scalar(0,0,0));
+	Mat result(size/4,size , CV_8UC3, Scalar(0,0,0));
 	double h=cvRound(circles[0][0]);//A(h,k)圓心
 	double k=cvRound(circles[0][1]);
 	double r=cvRound(circles[0][2]);//radius
@@ -74,14 +95,59 @@ Mat find_circle_and_draw_rec(Mat src_img,int size){
 	double dd=360/(double)size;
 	for(int i=0;i<size;i++){
 		double deg=(i*dd*pi)/180;
-		double radius=(2*r)/size;
-		for(int j=0;j<size/2;j++){
+		double radius=(4*r)/size;
+		for(int j=0;j<size/4;j++){
 			h2=h+j*radius*cos(deg);//h
 			k2=k+j*radius*sin(deg);//k
 			Vec3b color=src_img.at<Vec3b>(Point(h2,k2));
 			result.at<Vec3b>(Point(i,j)) = color;
 		}
 
+	}
+	return result;
+}
+Mat diff(Mat i1){
+	//GaussianBlur( i2, i2, Size(9,9), 0, 0 );
+	Mat result=i1;
+	int up=30;
+	int dn=-1;
+	int up2=256;
+	int dn2=200;
+	for(int x=0;x<i1.cols;x++){
+		for(int y=0;y<i1.rows;y++){
+			Vec3b color=i1.at<Vec3b>(Point(x,y));
+			if(y>200&&y<340){
+				if(color[2]<up&&color[2]>dn&&color[0]<up&&color[0]>dn&&color[1]<up&&color[1]>dn){
+					color[0]=255;
+					color[1]=255;
+					color[2]=255;
+				}
+				else{
+					color[0]=0;
+					color[1]=0;
+					color[2]=0;
+				}
+
+			}
+			else if(y<150&&y>50){
+				if(color[0]<up2&&color[1]<up2&&color[2]<up2&&color[0]>dn2&&color[1]>dn2&&color[2]>dn2){
+					color[0]=255;
+					color[1]=255;
+					color[2]=255;
+				}
+				else{
+					color[0]=0;
+					color[1]=0;
+					color[2]=0;
+				}
+			}
+			else{
+				color[0]=0;
+				color[1]=0;
+				color[2]=0;
+			}
+			result.at<Vec3b>(Point(x,y)) = color;
+		}
 	}
 	return result;
 }
