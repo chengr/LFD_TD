@@ -10,13 +10,16 @@ using namespace std;
 double pi =3.141592653589793;
 Mat find_circle_and_draw_rec(Mat src_img,int size);//輸入影像,輸出影像大小
 Mat diff(Mat i1);//二值化
+int count_dn(Mat in);
+int count_up(Mat in);
 int main(int argc, char** argv)
 {
 	Mat src;
 	Mat result;
 	int num=657;
 	//將圖片方型化
-	for(int i=num;i<=801;i++){
+	/*
+	for(int i=num;i<=884;i++){
 		ifstream f1("pic/DSC06"+to_string(i)+".jpg");
 		if (f1) {
 			src = imread("pic/DSC06"+to_string(i)+".jpg",1);
@@ -24,10 +27,13 @@ int main(int argc, char** argv)
 			imwrite("pic/out/SQR"+to_string(i)+".jpg", result);
 		}
 	}
+	*/
 	//namedWindow("Result", CV_WINDOW_AUTOSIZE );
 	//imshow("Result",result);
 	//處理方型化的圖
-	for(int i=num;i<=801;i++){
+	fstream fp;
+	fp.open("out2.txt", ios::out);
+	for(int i=num;i<=884;i++){
 		ifstream f1("pic/out/SQR"+to_string(i)+".jpg");
 		if (f1) {
 			src = imread("pic/out/SQR"+to_string(i)+".jpg",1);
@@ -38,12 +44,47 @@ int main(int argc, char** argv)
 			dilate(src,src,element2); 
 			//
 			pyrMeanShiftFiltering(src, src, 5, 40, 4);  //dst,color,level
-			imwrite("pic/out2/FC"+to_string(i)+"_1.jpg", src);
+			String tmps="其他";
+			if(i>=657&&i<=662){
+				tmps="中央有高對比白點";
+			}
+			if(i>=738&&i<=745){
+				tmps="中央有白點";
+			}
+			if(i>=663&&i<=678){
+				tmps="外圈有高對比黑點";
+			}
+			if(i>=679&&i<=704){
+				tmps="外圍有區域黑";
+			}
+			if(i>=708&&i<=730){
+				tmps="外圍有高對比黑點或白點";
+			}
+			if(i>=731&&i<=737){
+				tmps="有黑線";
+			}
+			if(i>=807&&i<=884){
+				tmps="不規則雜點加線";
+			}
+			if(i>=770&&i<=806){
+				tmps="標準";
+			}
+			if(i>=797&&i<=801){
+				tmps="大範圍的雜色點";
+			}
+
+			imwrite("pic/out2/"+tmps+"/F"+to_string(i)+"_1.jpg", src);
+			int avg_up=count_up(src);
+			int avg_dn=count_dn(src);
 			src=diff(src);
-			//
-			imwrite("pic/out2/FC"+to_string(i)+"_2.jpg", src);
+			imwrite("pic/out2/"+tmps+"/F"+to_string(i)+"_2.jpg", src);
+
+			
+			fp<<"id:"<<i<<"up:"<<avg_up<<"dn:"<<avg_dn<<endl;
+			
 		}
 	}
+	fp.close();
 	waitKey(0);
 	return 0;
 }
@@ -109,7 +150,7 @@ Mat find_circle_and_draw_rec(Mat src_img,int size){
 Mat diff(Mat i1){
 	//GaussianBlur( i2, i2, Size(9,9), 0, 0 );
 	Mat result=i1;
-	int up=30;
+	int up=27;
 	int dn=-1;
 	int up2=256;
 	int dn2=200;
@@ -117,7 +158,7 @@ Mat diff(Mat i1){
 		for(int y=0;y<i1.rows;y++){
 			Vec3b color=i1.at<Vec3b>(Point(x,y));
 			if(y>200&&y<340){
-				if(color[2]<up&&color[2]>dn&&color[0]<up&&color[0]>dn&&color[1]<up&&color[1]>dn){
+				if(color[2]<up&&color[2]>dn&&color[0]<up+25&&color[0]>dn&&color[1]<up&&color[1]>dn){
 					color[0]=255;
 					color[1]=255;
 					color[2]=255;
@@ -150,4 +191,34 @@ Mat diff(Mat i1){
 		}
 	}
 	return result;
+}
+int count_up(Mat in){
+	int avg=0;
+	int c=0;
+	for(int x=0;x<in.cols;x++){
+		for(int y=0;y<in.rows;y++){
+			if(y<150&&y>50){
+				Vec3b color=in.at<Vec3b>(Point(x,y));
+				avg=avg+color[0]+color[1]+color[2];
+				c++;
+			}
+		}
+	}
+
+	return avg/c;
+}
+int count_dn(Mat in){
+	int avg=0;
+	int c=0;
+	for(int x=0;x<in.cols;x++){
+		for(int y=0;y<in.rows;y++){
+			if(y>200&&y<340){
+				Vec3b color=in.at<Vec3b>(Point(x,y));
+				avg=avg+color[0]+color[1]+color[2];
+				c++;
+			}
+		}
+	}
+
+	return avg/c;
 }
