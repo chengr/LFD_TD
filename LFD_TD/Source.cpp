@@ -93,16 +93,20 @@ int main(int argc, char** argv)
 				tmps="大範圍的雜色點";
 			}
 			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_1org.jpg", src);
-			//	Mat water_o;//----
-			//water_o=src.clone();//----
-			//---------------------------------------------------------------------------------
+			Mat water_o;//----
+			water_o=src.clone();//----
+			medianBlur(water_o,water_o,9);
+			water_o.convertTo(water_o,-1,  1.1, -30);
+			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_2after_blur+CV.jpg", water_o);
 			blur(result, result, Size(9,9) );
 			medianBlur(src,src,9);
 			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_2after_blur.jpg", src);
-		
+			
+			
+			//---------------------------------------------------------------------------------
 
 			src.convertTo(src, -1, 0.3, 30);
-
+			
 			
 			//---------------------------------------------------------------------------------
 			cvtColor( src, src, CV_RGB2GRAY );
@@ -134,32 +138,13 @@ int main(int argc, char** argv)
 			int const max_BINARY_value = 255;
 			threshold( src, src, threshold_value, max_BINARY_value,threshold_type );
 			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_5threshold.jpg", src);
-			/*
-			Mat markers(src.size(),CV_8U,cv::Scalar(0));//-------
-			markers= src.clone();//-------
-			Mat elementmk(5,5,CV_8U,Scalar(1));
-			//dilate(markers,markers,elementmk);
-			erode(markers,markers,elementmk);
-			*/
-
-			Mat elements1(75,75,CV_8U,Scalar(1));  
+			Mat elements1(15,15,CV_8U,Scalar(1));  //50
 			dilate(src,src,elements1); 
-			/*
-			Mat bg(src.size(),CV_8U,cv::Scalar(0));//-------
-			bg=src.clone();
-			Mat elementbg(15,15,CV_8U,Scalar(1));  //-------
-			dilate(bg,bg,elementbg); //-------
-			threshold(bg,bg,1,128,cv::THRESH_BINARY_INV);//-------
-			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_waterBG.jpg",bg);
-			markers=markers+bg;
-			markers.convertTo(markers,CV_32S);//-------
-			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_waterM.jpg", markers);//-------
-			watershed(water_o,markers);//-------
-			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_water.jpg", markers);//-------
-			*/
-
 			src=draw_f(src,src);
 			Canny( src, src, 88, 88*1, 3 );
+
+			Mat markers(src.size(),CV_8U,cv::Scalar(0));//-------
+			
 
 			vector<vector<Point> > contours;
 		    vector<Vec4i> hierarchy;
@@ -167,10 +152,43 @@ int main(int argc, char** argv)
 			for( int i = 0; i< contours.size(); i++ )
 			{
 			Scalar color = Scalar( 0, 0, 255 );
-			drawContours( src2, contours, i, color, 2, 8, hierarchy, 0, Point() );
+			//drawContours( src2, contours, i, color, 2, 8, hierarchy, 0, Point() );
+ 
+			cv::Moments mom= cv::moments( contours[i]); 
+			// draw mass center  
+			//circle(src2,Point(mom.m10/mom.m00,mom.m01/mom.m00) , 2,color,2); // draw black dot 
+			circle(markers,Point(mom.m10/mom.m00,mom.m01/mom.m00) , 2,Scalar( 255, 255, 255 ),2);//----
+			
+			}
+			//imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_1draw_red.jpg", src2);
+
+
+			
+			Mat bg(src.size(),CV_8U,cv::Scalar(0));//-------
+			bg=markers.clone();
+			Mat elementbg(120,120,CV_8U,Scalar(1));  //-------
+			dilate(bg,bg,elementbg); //-------
+			threshold(bg,bg,1,128,cv::THRESH_BINARY_INV);//-------
+			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_waterBG.jpg",bg);
+			markers=markers+bg;
+			markers.convertTo(markers,CV_32S);//-------
+			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_waterM.jpg", markers);//-------
+			watershed(water_o,markers);//-------
+
+			//threshold( markers, markers, 250, 255,0);
+			markers.convertTo(markers,CV_8U);
+			threshold( markers, markers, 250, 255,0);
+			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_waterS.jpg", markers);//-------
+			
+			//src2=draw_O(src2,markers);
+			//markers=draw_f(markers,markers);
+			findContours( markers, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+			for( int i = 0; i< contours.size(); i++ )
+			{
+				Scalar color = Scalar( 0, 0, 255 );
+				drawContours( src2, contours, i, color, 2, 8, hierarchy, 0, Point() );
 			}
 			imwrite("pic/out2_training/"+tmps+"/F"+to_string(i)+"_1draw_red.jpg", src2);
-			
 		}
 	}
 	fp.close();
@@ -483,17 +501,16 @@ Mat draw_f(Mat i1,Mat i2){
 	}
 	return i1;
 }
-/*
+
 Mat draw_O(Mat i1,Mat i2){
-	//GaussianBlur( i2, i2, Size(9,9), 0, 0 );
 	for(int x=0;x<i1.cols;x++){
 		for(int y=0;y<i1.rows;y++){
-			if(i2.at<uchar>(Point(x,y))>1){
+			if(i2.at<uchar>(Point(x,y))==0){
 					i1.at<Vec3b>(Point(x,y))[0]=0;
 					i1.at<Vec3b>(Point(x,y))[1]=0;
-					i1.at<Vec3b>(Point(x,y))[2]=0;
+					i1.at<Vec3b>(Point(x,y))[2]=255;
 			}
 		}
 	}
 	return i1;
-}*/
+}
